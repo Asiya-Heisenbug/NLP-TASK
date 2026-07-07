@@ -1,0 +1,70 @@
+import torch
+from torch.utils.data import Dataset, DataLoader
+from collections import Counter
+
+texts = [
+    "I love natural language processing",
+    "PyTorch is used for deep learning",
+    "NLP models understand human language",
+    "Deep learning models are powerful"
+]
+
+def tokenize(text):
+    return text.lower().split()
+
+tokenized_texts = [tokenize(sentence) for sentence in texts]
+
+counter = Counter()
+for sentence in tokenized_texts:
+    counter.update(sentence)
+
+vocab = {
+    "<PAD>": 0,
+    "<UNK>": 1
+}
+
+for word in counter:
+    vocab[word] = len(vocab)
+
+def text_to_indices(tokens):
+    return [vocab.get(word, vocab["<UNK>"]) for word in tokens]
+
+numerical_texts = [
+    text_to_indices(sentence)
+    for sentence in tokenized_texts
+]
+
+class TextDataset(Dataset):
+    def __init__(self, data):
+        self.data = data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        return torch.tensor(self.data[index])
+
+dataset = TextDataset(numerical_texts)
+
+def collate_fn(batch):
+    max_length = max(len(sequence) for sequence in batch)
+    padded_batch = []
+    for sequence in batch:
+        padding_length = max_length - len(sequence)
+        padded_sequence = torch.cat([
+            sequence,
+            torch.zeros(padding_length, dtype=torch.long)
+        ])
+        padded_batch.append(padded_sequence)
+    return torch.stack(padded_batch)
+
+loader = DataLoader(
+    dataset,
+    batch_size=2,
+    shuffle=True,
+    collate_fn=collate_fn
+)
+
+for batch in loader:
+    print(batch)
+    print(batch.shape)
